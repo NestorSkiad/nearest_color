@@ -115,7 +115,7 @@ fn main() {
 
     let standard_colors = get_standard_colors();
 
-    println!("{:?}", standard_colors);
+    println!("Named colors: {:?}", standard_colors);
 
     /*let sample_standard = StandardColor { name: String::from("Sample"), color: [255, 255, 255] };
     let other_standard = StandardColor { name: String::from("Other"), color: [0, 0, 0] };*/
