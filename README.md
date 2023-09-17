@@ -9,9 +9,9 @@ so it should be trivial to convert to multithreaded using Rayon (theoretically).
 
 The program's result has been included in output.txt. Yes, the most common color is Lime Green.
 
-### Performance
+## Performance
 
-##### Single threaded
+#### Single threaded
 
 Uses 0.6MB RAM, 10% CPU.
 
@@ -26,7 +26,7 @@ Milliseconds      : 318
 Ticks             : 4723188546
 ```
 
-##### Per-color multithreaded
+#### Per-color multithreaded
 
 Uses 2MB RAM, 100% CPU.
 
@@ -39,7 +39,7 @@ Milliseconds      : 842
 Ticks             : 3708427107
 ```
 
-##### Multithreaded from color generator
+#### Multithreaded from color generator
 
 Uses ~700MB RAM, 100% CPU.
 
