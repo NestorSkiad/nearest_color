@@ -1,8 +1,9 @@
 extern crate csv;
-#[macro_use]
 extern crate serde;
 
 use std::collections::HashMap;
+use rayon::prelude::IntoParallelIterator;
+use rayon::iter::ParallelIterator;
 
 
 type Color = [i64; 3];
@@ -56,6 +57,19 @@ fn color_generator() -> ColorGenerator {
     ColorGenerator { curr: [0; 3] }
 }
 
+// A Lot faster than the generator
+fn usize_to_color(num: usize) -> Color {
+    let mut c: Color = [0, 0, 0];
+
+    c[2] = (num % 256) as i64;
+    let mut div: i64 = (num / 256) as i64;
+    c[1] = div % 256;
+    div = div / 256;
+    c[0] = div % 256;
+
+    c
+}
+
 #[derive(Debug, Clone)]
 struct StandardColor {
     name: String,
@@ -81,6 +95,17 @@ fn get_standard_colors() -> Vec<StandardColor> {
     for result in rdr.unwrap().deserialize() {
         let std_color: DeserialisedStandardColor = result.unwrap();
         res.push(to_standard_color(std_color))
+    }
+    res
+}
+
+fn merge_maps(map1: HashMap<String, i32>, map2: HashMap<String, i32>) -> HashMap<String, i32> {
+    let mut res = map1.clone();
+    for k in map2.into_keys() {
+        match res.get(&k) {
+            None => { res.insert(k, 1); }
+            Some(x) => { res.insert(k, x + 1); }
+        }
     }
     res
 }
@@ -122,6 +147,7 @@ fn main() {
     //let mut output = String::new();
     let mut distribution = HashMap::with_capacity(865);
 
+    /*
     for color in color_generator().into_iter() {
         //output.push_str(&format!("nearest color to {:?} is {:?}\n", color, nearest_color_single(&standard_colors, color).name));
 
@@ -130,6 +156,18 @@ fn main() {
         match distribution.get(&nearest_color) {
             Some(n) => distribution.insert(nearest_color, n + 1),
             None => distribution.insert(nearest_color, 1)
+        };
+    }*/
+
+    let res: Vec<String> = (0..colors).into_par_iter()
+        .map(|x| usize_to_color(x as usize))
+        .map(|x| nearest_color_single(&standard_colors, x).name)
+        .collect();
+
+    for color in res.into_iter() {
+        match distribution.get(&color) {
+            Some(n) => distribution.insert(color, n + 1),
+            None => distribution.insert(color, 1)
         };
     }
 

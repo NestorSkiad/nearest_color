@@ -8,4 +8,4 @@ edition = "2021"
 [dependencies]
 serde = {version = "1.0.188", features = ["derive"]}
 csv = "1.2.2"
-egui = "0.22.0"
+rayon = "1.7.0"
