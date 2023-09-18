@@ -9,3 +9,4 @@ edition = "2021"
 serde = {version = "1.0.188", features = ["derive"]}
 csv = "1.2.2"
 rayon = "1.7.0"
+clap = { version = "4.4.3", features = ["derive"] }

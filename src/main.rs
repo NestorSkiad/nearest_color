@@ -1,9 +1,18 @@
 extern crate csv;
 extern crate serde;
+extern crate clap;
 
 use std::collections::HashMap;
 use rayon::prelude::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
+use clap::Parser;
+
+#[derive(Parser)]
+struct Cli {
+    #[arg(default_value = "MultiThreadedGenerator")]
+    command: String,
+}
+
 
 
 type Color = [i64; 3];
@@ -58,7 +67,7 @@ fn color_generator() -> ColorGenerator {
 }
 
 // A Lot faster than the generator
-fn usize_to_color(num: usize) -> Color {
+fn num_to_color(num: i32) -> Color {
     let mut c: Color = [0, 0, 0];
 
     c[2] = (num % 256) as i64;
@@ -101,10 +110,10 @@ fn get_standard_colors() -> Vec<StandardColor> {
 
 fn merge_maps(map1: HashMap<String, i32>, map2: HashMap<String, i32>) -> HashMap<String, i32> {
     let mut res = map1.clone();
-    for k in map2.into_keys() {
+    for (k, v) in map2.into_iter() {
         match res.get(&k) {
             None => { res.insert(k, 1); }
-            Some(x) => { res.insert(k, x + 1); }
+            Some(x) => { res.insert(k, x + v); }
         }
     }
     res
@@ -118,8 +127,45 @@ fn nearest_color_single(standard_colors: &Vec<StandardColor>, color: Color) -> S
         .0
 }
 
+fn run_single_threaded(standard_colors: Vec<StandardColor>, color_num: &i32) -> HashMap<String, i32> {
+    println!("Running SingleThreaded");
+    let mut distribution = HashMap::with_capacity(865);
+
+    for color in (0..*color_num).map(|x| num_to_color(x)) {
+        let nearest_color = nearest_color_single(&standard_colors, color).name;
+
+        match distribution.get(&nearest_color) {
+            Some(n) => distribution.insert(nearest_color, n + 1),
+            None => distribution.insert(nearest_color, 1)
+        };
+    }
+
+    distribution
+}
+
+fn run_multithreaded_generator(standard_colors: Vec<StandardColor>, color_num: &i32) -> HashMap<String, i32> {
+    println!("Running MultiThreadedGenerator");
+
+    let mut distribution = HashMap::with_capacity(865);
+
+    let res: Vec<String> = (0..*color_num).into_par_iter()
+        .map(|x| num_to_color(x))
+        .map(|x| nearest_color_single(&standard_colors, x).name)
+        .collect();
+
+    for color in res.into_iter() {
+        match distribution.get(&color) {
+            Some(n) => distribution.insert(color, n + 1),
+            None => distribution.insert(color, 1)
+        };
+    }
+
+    distribution
+}
+
 
 fn main() {
+    let cli = Cli::parse();
     let colors: i32 = 2_i32.pow(8).pow(3);
     println!("number of 8 bit colors is {colors}");
 
@@ -142,34 +188,19 @@ fn main() {
 
     println!("Named colors: {:?}", standard_colors);
 
-    /*let sample_standard = StandardColor { name: String::from("Sample"), color: [255, 255, 255] };
-    let other_standard = StandardColor { name: String::from("Other"), color: [0, 0, 0] };*/
-    //let mut output = String::new();
-    let mut distribution = HashMap::with_capacity(865);
+    let distribution = match cli.command.as_str() {
+        "SingleThreaded" => { run_single_threaded(standard_colors, &colors) }
+        "PerColor" => { HashMap::new() }
+        "MultiThreadedGenerator" | _ => { run_multithreaded_generator(standard_colors, &colors) }
+    };
 
-    /*
-    for color in color_generator().into_iter() {
-        //output.push_str(&format!("nearest color to {:?} is {:?}\n", color, nearest_color_single(&standard_colors, color).name));
-
-        let nearest_color = nearest_color_single(&standard_colors, color).name;
-
-        match distribution.get(&nearest_color) {
-            Some(n) => distribution.insert(nearest_color, n + 1),
-            None => distribution.insert(nearest_color, 1)
-        };
-    }*/
-
-    let res: Vec<String> = (0..colors).into_par_iter()
-        .map(|x| usize_to_color(x as usize))
+    /*let distribution = (0..colors).into_par_iter()
+        .map(|x| num_to_color(x))
         .map(|x| nearest_color_single(&standard_colors, x).name)
-        .collect();
-
-    for color in res.into_iter() {
-        match distribution.get(&color) {
-            Some(n) => distribution.insert(color, n + 1),
-            None => distribution.insert(color, 1)
-        };
-    }
+        .map(|x| {
+            HashMap::from([(x, 1)])
+        })
+        .reduce(|| HashMap::new(), |x, y| merge_maps(x, y));*/
 
     let mut dist_vec: Vec<(String, i32)> = distribution.into_iter().collect();
 
@@ -178,5 +209,8 @@ fn main() {
 
     //println!("{}", output);
     println!("{:?}", dist_vec);
+
+    let total_colors: i32 = dist_vec.into_iter().map(|x| x.1).sum();
+    assert_eq!(colors, total_colors);
     //println!("{:?}", nearest_color_single(&standard_colors, [192, 58, 88]))
 }
