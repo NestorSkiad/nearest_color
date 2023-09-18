@@ -101,7 +101,7 @@ impl DeserialisedStandardColor {
 
 fn get_standard_colors() -> Vec<StandardColor> {
     let mut res: Vec<StandardColor> = Vec::with_capacity(865);
-    let mut rdr = csv::Reader::from_path("C:/Users/Nestor/IdeaProjects/nearest_color/colors.csv");
+    let rdr = csv::Reader::from_path("C:/Users/Nestor/IdeaProjects/nearest_color/colors.csv"); // todo: make relative and use include like in nearest color GUI
 
     for result in rdr.unwrap().deserialize() {
         let std_color: DeserialisedStandardColor = result.unwrap();
