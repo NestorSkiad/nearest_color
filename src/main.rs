@@ -93,8 +93,10 @@ struct DeserialisedStandardColor {
     b: i64,
 }
 
-fn to_standard_color(dsc: DeserialisedStandardColor) -> StandardColor {
-    StandardColor { name: String::from(&dsc.name), color: [dsc.r, dsc.g, dsc.b] }
+impl DeserialisedStandardColor {
+    fn to_standard_color(self) -> StandardColor {
+        StandardColor { name: String::from(self.name), color: [self.r, self.b, self.g]}
+    }
 }
 
 fn get_standard_colors() -> Vec<StandardColor> {
@@ -103,7 +105,7 @@ fn get_standard_colors() -> Vec<StandardColor> {
 
     for result in rdr.unwrap().deserialize() {
         let std_color: DeserialisedStandardColor = result.unwrap();
-        res.push(to_standard_color(std_color))
+        res.push(std_color.to_standard_color())
     }
     res
 }

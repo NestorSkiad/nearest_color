@@ -2,7 +2,7 @@
 
 See **Nearest Color GUI** to get a better idea of what this project is about.
 
-This version runs through all 8-bit colors to find the nearest named color for each.
+This version runs through all 8-bit colors to find the nearest named color for each. The default strategy is multithreaded from color generator.
 
 The program's result has been included in output.txt.
 
