@@ -184,7 +184,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("Named colors: {:?}", standard_colors);
 
     let distribution = match cli.command.as_str() {
-        "SingleThreaded" =>{ run_single_threaded(standard_colors, &colors)? }
+        "SingleThreaded" => { run_single_threaded(standard_colors, &colors)? }
         "PerColor" => { HashMap::new() }
         "MultiThreadedGenerator" | _ => { run_multithreaded_generator(standard_colors, &colors)? }
     };
