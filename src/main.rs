@@ -2,6 +2,7 @@ extern crate csv;
 extern crate clap;
 
 use std::collections::HashMap;
+use std::error::Error;
 use rayon::prelude::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
 use clap::Parser;
@@ -86,21 +87,21 @@ fn build_standard_color(name: String, color: Color) -> StandardColor {
     }
 }
 
-fn get_standard_colors() -> Vec<StandardColor> {
+fn get_standard_colors() -> Result<Vec<StandardColor>, Box<dyn Error>> {
     let mut res: Vec<StandardColor> = Vec::with_capacity(865);
     let colors_str = include_str!("colors.csv");
     let mut rdr = csv::Reader::from_reader(colors_str.as_bytes());
 
     for record in rdr.records() {
-        let record = record.unwrap();
+        let record = record?;
         let color = [
-            record[1].parse::<i64>().unwrap(),
-            record[2].parse::<i64>().unwrap(),
-            record[3].parse::<i64>().unwrap()
+            record[1].parse::<i64>()?,
+            record[2].parse::<i64>()?,
+            record[3].parse::<i64>()?
         ];
         res.push(build_standard_color(String::from(&record[0]), color));
     }
-    res
+    Ok(res)
 }
 
 fn _merge_maps(map1: HashMap<String, i32>, map2: HashMap<String, i32>) -> HashMap<String, i32> {
@@ -114,20 +115,19 @@ fn _merge_maps(map1: HashMap<String, i32>, map2: HashMap<String, i32>) -> HashMa
     res
 }
 
-fn nearest_color_single(standard_colors: &Vec<StandardColor>, color: Color) -> StandardColor {
-    standard_colors.into_iter()
+fn nearest_color_single(standard_colors: &Vec<StandardColor>, color: Color) -> Result<StandardColor, Box<dyn Error>> {
+    Ok(standard_colors.into_iter()
         .map(|std| (std.clone(), euclidean_distance(&std.color, &color)))
-        .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap())
-        .unwrap()
-        .0
+        .min_by(|a, b| a.1.partial_cmp(&b.1).expect("Failed ordering in nearest_color_single")).expect("nearest_color_single failed to find minimum")
+        .0)
 }
 
-fn run_single_threaded(standard_colors: Vec<StandardColor>, color_num: &i32) -> HashMap<String, i32> {
+fn run_single_threaded(standard_colors: Vec<StandardColor>, color_num: &i32) -> Result<HashMap<String, i32>, Box<dyn Error>> {
     println!("Running SingleThreaded");
     let mut distribution = HashMap::with_capacity(865);
 
     for color in (0..*color_num).map(|x| num_to_color(x)) {
-        let nearest_color = nearest_color_single(&standard_colors, color).name;
+        let nearest_color = nearest_color_single(&standard_colors, color)?.name;
 
         match distribution.get(&nearest_color) {
             Some(n) => distribution.insert(nearest_color, n + 1),
@@ -135,17 +135,17 @@ fn run_single_threaded(standard_colors: Vec<StandardColor>, color_num: &i32) -> 
         };
     }
 
-    distribution
+    Ok(distribution)
 }
 
-fn run_multithreaded_generator(standard_colors: Vec<StandardColor>, color_num: &i32) -> HashMap<String, i32> {
+fn run_multithreaded_generator(standard_colors: Vec<StandardColor>, color_num: &i32) -> Result<HashMap<String, i32>, Box<dyn Error>> {
     println!("Running MultiThreadedGenerator");
 
     let mut distribution = HashMap::with_capacity(865);
 
     let res: Vec<String> = (0..*color_num).into_par_iter()
         .map(|x| num_to_color(x))
-        .map(|x| nearest_color_single(&standard_colors, x).name)
+        .map(|x| nearest_color_single(&standard_colors, x).unwrap().name)
         .collect();
 
     for color in res.into_iter() {
@@ -155,11 +155,11 @@ fn run_multithreaded_generator(standard_colors: Vec<StandardColor>, color_num: &
         };
     }
 
-    distribution
+    Ok(distribution)
 }
 
 
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     let cli = Cli::parse();
     let colors: i32 = 2_i32.pow(8).pow(3);
     println!("number of 8 bit colors is {colors}");
@@ -179,14 +179,14 @@ fn main() {
 
     let _all_colors: Vec<Color> = color_generator().into_iter().collect(); */
 
-    let standard_colors = get_standard_colors();
+    let standard_colors = get_standard_colors()?;
 
     println!("Named colors: {:?}", standard_colors);
 
     let distribution = match cli.command.as_str() {
-        "SingleThreaded" => { run_single_threaded(standard_colors, &colors) }
+        "SingleThreaded" =>{ run_single_threaded(standard_colors, &colors)? }
         "PerColor" => { HashMap::new() }
-        "MultiThreadedGenerator" | _ => { run_multithreaded_generator(standard_colors, &colors) }
+        "MultiThreadedGenerator" | _ => { run_multithreaded_generator(standard_colors, &colors)? }
     };
 
     /*let distribution = (0..colors).into_par_iter()
@@ -208,4 +208,6 @@ fn main() {
     let total_colors: i32 = dist_vec.into_iter().map(|x| x.1).sum();
     assert_eq!(colors, total_colors);
     //println!("{:?}", nearest_color_single(&standard_colors, [192, 58, 88]))
+
+    Ok(())
 }
