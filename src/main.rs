@@ -1,9 +1,7 @@
 extern crate csv;
-extern crate serde;
 extern crate clap;
 
 use std::collections::HashMap;
-use std::path::Path;
 use rayon::prelude::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
 use clap::Parser;
@@ -81,27 +79,26 @@ struct StandardColor {
     color: Color,
 }
 
-#[derive(serde::Deserialize, Debug)]
-struct DeserialisedStandardColor {
-    name: String,
-    r: i64,
-    g: i64,
-    b: i64,
-}
-
-impl DeserialisedStandardColor {
-    fn to_standard_color(self) -> StandardColor {
-        StandardColor { name: String::from(self.name), color: [self.r, self.b, self.g] }
+fn build_standard_color(name: String, color: Color) -> StandardColor {
+    StandardColor {
+        name,
+        color,
     }
 }
 
 fn get_standard_colors() -> Vec<StandardColor> {
     let mut res: Vec<StandardColor> = Vec::with_capacity(865);
-    let rdr = csv::Reader::from_path(Path::new("./colors.csv")); // todo: use include like in nearest color GUI
+    let colors_str = include_str!("colors.csv");
+    let mut rdr = csv::Reader::from_reader(colors_str.as_bytes());
 
-    for result in rdr.unwrap().deserialize() {
-        let std_color: DeserialisedStandardColor = result.unwrap();
-        res.push(std_color.to_standard_color())
+    for record in rdr.records() {
+        let record = record.unwrap();
+        let color = [
+            record[1].parse::<i64>().unwrap(),
+            record[2].parse::<i64>().unwrap(),
+            record[3].parse::<i64>().unwrap()
+        ];
+        res.push(build_standard_color(String::from(&record[0]), color));
     }
     res
 }
