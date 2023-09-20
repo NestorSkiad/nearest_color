@@ -3,6 +3,7 @@ extern crate serde;
 extern crate clap;
 
 use std::collections::HashMap;
+use std::path::Path;
 use rayon::prelude::IntoParallelIterator;
 use rayon::iter::ParallelIterator;
 use clap::Parser;
@@ -14,12 +15,7 @@ struct Cli {
 }
 
 
-
 type Color = [i64; 3];
-
-fn color_to_str(c: Color) -> String {
-    format! {"R{} G{} B{}", c[0], c[1], c[2]}
-}
 
 fn euclidean_distance(vec_a: &Color, vec_b: &Color) -> f64 {
     let mut sum: i64 = 0;
@@ -95,13 +91,13 @@ struct DeserialisedStandardColor {
 
 impl DeserialisedStandardColor {
     fn to_standard_color(self) -> StandardColor {
-        StandardColor { name: String::from(self.name), color: [self.r, self.b, self.g]}
+        StandardColor { name: String::from(self.name), color: [self.r, self.b, self.g] }
     }
 }
 
 fn get_standard_colors() -> Vec<StandardColor> {
     let mut res: Vec<StandardColor> = Vec::with_capacity(865);
-    let rdr = csv::Reader::from_path("C:/Users/Nestor/IdeaProjects/nearest_color/colors.csv"); // todo: make relative and use include like in nearest color GUI
+    let rdr = csv::Reader::from_path(Path::new("./colors.csv")); // todo: use include like in nearest color GUI
 
     for result in rdr.unwrap().deserialize() {
         let std_color: DeserialisedStandardColor = result.unwrap();
@@ -110,7 +106,7 @@ fn get_standard_colors() -> Vec<StandardColor> {
     res
 }
 
-fn merge_maps(map1: HashMap<String, i32>, map2: HashMap<String, i32>) -> HashMap<String, i32> {
+fn _merge_maps(map1: HashMap<String, i32>, map2: HashMap<String, i32>) -> HashMap<String, i32> {
     let mut res = map1.clone();
     for (k, v) in map2.into_iter() {
         match res.get(&k) {
