@@ -104,11 +104,11 @@ fn get_standard_colors() -> Result<Vec<StandardColor>, Box<dyn Error>> {
     Ok(res)
 }
 
-fn _merge_maps(map1: HashMap<String, i32>, map2: HashMap<String, i32>) -> HashMap<String, i32> {
+fn merge_maps(map1: HashMap<String, i32>, map2: HashMap<String, i32>) -> HashMap<String, i32> {
     let mut res = map1.clone();
     for (k, v) in map2.into_iter() {
         match res.get(&k) {
-            None => { res.insert(k, 1); }
+            None => { res.insert(k, v); }
             Some(x) => { res.insert(k, x + v); }
         }
     }
@@ -141,12 +141,12 @@ fn run_single_threaded(standard_colors: Vec<StandardColor>, color_num: &i32) -> 
 fn run_multithreaded_generator(standard_colors: Vec<StandardColor>, color_num: &i32) -> Result<HashMap<String, i32>, Box<dyn Error>> {
     println!("Running MultiThreadedGenerator");
 
-    let mut distribution = HashMap::with_capacity(865);
-
     let res: Vec<String> = (0..*color_num).into_par_iter()
         .map(|x| num_to_color(x))
         .map(|x| nearest_color_single(&standard_colors, x).unwrap().name)
         .collect();
+
+    let mut distribution = HashMap::with_capacity(865);
 
     for color in res.into_iter() {
         match distribution.get(&color) {
@@ -156,6 +156,18 @@ fn run_multithreaded_generator(standard_colors: Vec<StandardColor>, color_num: &
     }
 
     Ok(distribution)
+}
+
+fn run_multithreaded_merge(standard_colors: Vec<StandardColor>, color_num: &i32) -> Result<HashMap<String, i32>, Box<dyn Error>> {
+    println!("Running MultiThreadedMerge");
+
+    Ok((0..*color_num).into_par_iter()
+        .map(|x| num_to_color(x))
+        .map(|x| nearest_color_single(&standard_colors, x).unwrap().name)
+        .map(|x| {
+            HashMap::from([(x, 1)])
+        })
+        .reduce(|| HashMap::new(), |x, y| merge_maps(x, y)))
 }
 
 
@@ -183,26 +195,18 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     println!("Named colors: {:?}", standard_colors);
 
-    let distribution = match cli.command.as_str() {
-        "SingleThreaded" => { run_single_threaded(standard_colors, &colors)? }
-        "PerColor" => { HashMap::new() }
-        "MultiThreadedGenerator" | _ => { run_multithreaded_generator(standard_colors, &colors)? }
+    let distribution = match cli.command.to_lowercase().as_str() {
+        "singlethreaded" => run_single_threaded(standard_colors, &colors)?,
+        "percolor" => HashMap::new(),
+        "multithreadedgenerator" => run_multithreaded_generator(standard_colors, &colors)?,
+        "multithreadedmerge" | _ => run_multithreaded_merge(standard_colors, &colors)?
     };
-
-    /*let distribution = (0..colors).into_par_iter()
-        .map(|x| num_to_color(x))
-        .map(|x| nearest_color_single(&standard_colors, x).name)
-        .map(|x| {
-            HashMap::from([(x, 1)])
-        })
-        .reduce(|| HashMap::new(), |x, y| merge_maps(x, y));*/
 
     let mut dist_vec: Vec<(String, i32)> = distribution.into_iter().collect();
 
     dist_vec.sort_by_key(|x| x.1);
     dist_vec.reverse();
 
-    //println!("{}", output);
     println!("{:?}", dist_vec);
 
     let total_colors: i32 = dist_vec.into_iter().map(|x| x.1).sum();
