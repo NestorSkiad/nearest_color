@@ -3,7 +3,7 @@ extern crate clap;
 
 use std::collections::HashMap;
 use std::error::Error;
-use rayon::prelude::IntoParallelIterator;
+use rayon::prelude::{IntoParallelIterator, ParallelSliceMut};
 use rayon::iter::ParallelIterator;
 use clap::Parser;
 
@@ -191,7 +191,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let _all_colors: Vec<Color> = color_generator().into_iter().collect(); */
 
-    let standard_colors = get_standard_colors()?;
+    let standard_colors: Vec<StandardColor> = get_standard_colors()?;
 
     println!("Named colors: {:?}", standard_colors);
 
@@ -204,8 +204,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut dist_vec: Vec<(String, i32)> = distribution.into_iter().collect();
 
-    dist_vec.sort_by_key(|x| x.1);
-    dist_vec.reverse();
+    dist_vec.par_sort_unstable_by(|x, y| y.1.cmp(&x.1));
 
     println!("{:?}", dist_vec);
 
